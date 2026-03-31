@@ -4,10 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, CalendarDays, Ticket } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { data: profiles, isLoading: loadingProfiles } = useQuery({
-    queryKey: ["allProfiles"],
+  const { data: users, isLoading: loadingUsers } = useQuery({
+    queryKey: ["allUsers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*, user_roles(role)");
+      const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -22,29 +22,26 @@ export default function AdminDashboard() {
     },
   });
 
-  const { data: bookings, isLoading: loadingBookings } = useQuery({
-    queryKey: ["allBookings"],
+  const { data: tickets, isLoading: loadingTickets } = useQuery({
+    queryKey: ["allTickets"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("bookings").select("*");
+      const { data, error } = await supabase.from("tickets").select("*");
       if (error) throw error;
       return data;
     },
   });
 
-  const loading = loadingProfiles || loadingEvents || loadingBookings;
-
-  if (loading) {
+  if (loadingUsers || loadingEvents || loadingTickets) {
     return <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}</div>;
   }
 
   return (
     <div className="space-y-8">
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { label: "Total Users", value: profiles?.length ?? 0, icon: Users, color: "text-primary" },
+          { label: "Total Users", value: users?.length ?? 0, icon: Users, color: "text-primary" },
           { label: "Total Events", value: events?.length ?? 0, icon: CalendarDays, color: "text-accent" },
-          { label: "Total Bookings", value: bookings?.length ?? 0, icon: Ticket, color: "text-primary" },
+          { label: "Total Tickets", value: tickets?.length ?? 0, icon: Ticket, color: "text-primary" },
         ].map((s) => (
           <div key={s.label} className="glass-card p-6 text-center">
             <s.icon className={`h-8 w-8 mx-auto mb-2 ${s.color}`} />
@@ -54,25 +51,18 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Users */}
       <div>
         <h2 className="font-display text-xl font-semibold mb-4">All Users</h2>
         <div className="glass-card divide-y divide-border">
-          {profiles?.map((p: any) => (
-            <div key={p.id} className="flex items-center justify-between p-4">
-              <div>
-                <p className="font-medium">{p.full_name || "No name"}</p>
-                <p className="text-sm text-muted-foreground">{p.email}</p>
-              </div>
-              <span className="text-xs font-medium capitalize bg-primary/10 text-primary px-3 py-1 rounded-full">
-                {p.user_roles?.[0]?.role || "participant"}
-              </span>
+          {users?.map((u) => (
+            <div key={u.id} className="flex items-center justify-between p-4">
+              <span className="font-medium">@{u.username}</span>
+              <span className="text-xs font-medium capitalize bg-primary/10 text-primary px-3 py-1 rounded-full">{u.role}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Events */}
       <div>
         <h2 className="font-display text-xl font-semibold mb-4">All Events</h2>
         <div className="glass-card divide-y divide-border">
@@ -80,7 +70,7 @@ export default function AdminDashboard() {
             <div key={ev.id} className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium">{ev.title}</p>
-                <p className="text-sm text-muted-foreground">{ev.location || "No location"}</p>
+                <p className="text-xs text-muted-foreground">by @{ev.organizer_username}</p>
               </div>
               <span className="text-sm text-muted-foreground">{new Date(ev.date).toLocaleDateString()}</span>
             </div>
