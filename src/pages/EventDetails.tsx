@@ -1,18 +1,21 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { CalendarDays, MapPin, DollarSign, Users, ArrowLeft, Ticket } from "lucide-react";
+import { CalendarDays, MapPin, DollarSign, Users, ArrowLeft, Ticket, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { currentUser } = useUser();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["event", id],
@@ -24,46 +27,51 @@ export default function EventDetails() {
     enabled: !!id,
   });
 
-  const { data: bookingCount } = useQuery({
-    queryKey: ["bookingCount", id],
+  const { data: existingTicket } = useQuery({
+    queryKey: ["myTicket", id, currentUser?.username],
     queryFn: async () => {
-      const { count, error } = await supabase.from("bookings").select("*", { count: "exact", head: true }).eq("event_id", id!).eq("status", "confirmed");
-      if (error) throw error;
-      return count ?? 0;
-    },
-    enabled: !!id,
-  });
-
-  const { data: existingBooking } = useQuery({
-    queryKey: ["myBooking", id, user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("bookings").select("*").eq("event_id", id!).eq("user_id", user!.id).maybeSingle();
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("*")
+        .eq("event_id", id!)
+        .eq("participant_username", currentUser!.username)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!id && !!user,
+    enabled: !!id && !!currentUser,
   });
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("bookings").insert({ user_id: user!.id, event_id: id! });
-      if (error) throw error;
+      // Insert ticket
+      const { error: ticketErr } = await supabase
+        .from("tickets")
+        .insert({ event_id: id!, participant_username: currentUser!.username });
+      if (ticketErr) throw ticketErr;
+
+      // Decrement available_slots
+      const { error: updateErr } = await supabase
+        .from("events")
+        .update({ available_slots: (event!.available_slots ?? 1) - 1 })
+        .eq("id", id!);
+      if (updateErr) throw updateErr;
     },
     onSuccess: () => {
-      toast.success("🎉 Booking confirmed! See you there.");
-      qc.invalidateQueries({ queryKey: ["bookingCount", id] });
-      qc.invalidateQueries({ queryKey: ["myBooking", id] });
+      toast.success("🎉 Ticket booked! See you there.", { duration: 4000 });
+      setDrawerOpen(false);
+      qc.invalidateQueries({ queryKey: ["event", id] });
+      qc.invalidateQueries({ queryKey: ["myTicket", id] });
+      qc.invalidateQueries({ queryKey: ["events"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
-
-  const spotsLeft = event ? (event.capacity ?? 100) - (bookingCount ?? 0) : 0;
 
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12 max-w-4xl space-y-6">
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="aspect-[2/1] w-full rounded-xl" />
+        <Skeleton className="aspect-[2.5/1] w-full rounded-xl" />
         <Skeleton className="h-6 w-3/4" />
         <Skeleton className="h-40 w-full" />
       </div>
@@ -77,6 +85,8 @@ export default function EventDetails() {
       </div>
     );
   }
+
+  const slots = event.available_slots ?? 0;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl animate-fade-in">
@@ -96,9 +106,16 @@ export default function EventDetails() {
         </div>
 
         <div className="p-6 md:p-10 space-y-6">
+          <div className="flex flex-wrap items-center gap-3">
+            {event.category && (
+              <span className="text-xs font-medium bg-primary/10 text-primary px-3 py-1 rounded-full capitalize">{event.category}</span>
+            )}
+            <span className="text-xs text-muted-foreground">by @{event.organizer_username}</span>
+          </div>
+
           <h1 className="font-display text-3xl md:text-4xl font-bold">{event.title}</h1>
 
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5 bg-secondary px-3 py-1.5 rounded-full">
               <CalendarDays className="h-4 w-4 text-primary" />
               {format(new Date(event.date), "EEEE, MMMM d, yyyy · h:mm a")}
@@ -111,7 +128,7 @@ export default function EventDetails() {
             )}
             <span className="flex items-center gap-1.5 bg-secondary px-3 py-1.5 rounded-full">
               <Users className="h-4 w-4 text-primary" />
-              {spotsLeft} spots left
+              {slots} / {event.capacity} spots left
             </span>
           </div>
 
@@ -128,21 +145,53 @@ export default function EventDetails() {
               )}
             </div>
 
-            {existingBooking ? (
+            {existingTicket ? (
               <div className="flex items-center gap-2 text-accent font-medium">
-                <Ticket className="h-5 w-5" /> You're booked!
+                <CheckCircle2 className="h-5 w-5" /> You're booked!
               </div>
-            ) : user ? (
-              <Button
-                onClick={() => bookMutation.mutate()}
-                disabled={bookMutation.isPending || spotsLeft <= 0}
-                className="gradient-btn px-8 py-3"
-              >
-                {spotsLeft <= 0 ? "Sold out" : bookMutation.isPending ? "Booking..." : "Book Now"}
-              </Button>
+            ) : currentUser ? (
+              <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+                <SheetTrigger asChild>
+                  <Button className="gradient-btn px-8 py-3" disabled={slots <= 0}>
+                    {slots <= 0 ? "Sold Out" : "Book Ticket"}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle className="font-display">Confirm Booking</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 space-y-6">
+                    <div className="glass-card p-4 space-y-3">
+                      <h3 className="font-display font-semibold">{event.title}</h3>
+                      <p className="text-sm text-muted-foreground">{format(new Date(event.date), "MMMM d, yyyy · h:mm a")}</p>
+                      {event.location && <p className="text-sm text-muted-foreground flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {event.location}</p>}
+                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                        <span className="text-sm text-muted-foreground">Price</span>
+                        <span className="font-display font-bold text-lg">
+                          {Number(event.price) > 0 ? `$${Number(event.price)}` : "Free"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="glass-card p-4 flex items-center gap-3">
+                      <Ticket className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">Booking as @{currentUser.username}</p>
+                        <p className="text-xs text-muted-foreground">1 ticket</p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => bookMutation.mutate()}
+                      disabled={bookMutation.isPending}
+                      className="w-full gradient-btn h-12 text-base"
+                    >
+                      {bookMutation.isPending ? "Booking..." : "Confirm Booking"}
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             ) : (
-              <Button onClick={() => navigate("/auth")} className="gradient-btn px-8 py-3">
-                Sign in to book
+              <Button onClick={() => navigate("/login")} className="gradient-btn px-8 py-3">
+                Login to Book
               </Button>
             )}
           </div>

@@ -14,125 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
-      bookings: {
-        Row: {
-          created_at: string
-          event_id: string
-          id: string
-          status: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          event_id: string
-          id?: string
-          status?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          event_id?: string
-          id?: string
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bookings_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       events: {
         Row: {
-          capacity: number | null
+          available_slots: number
+          capacity: number
+          category: string | null
           created_at: string
           date: string
           description: string | null
           id: string
           image_url: string | null
           location: string | null
-          organizer_id: string
+          organizer_username: string
           price: number | null
           title: string
           updated_at: string
         }
         Insert: {
-          capacity?: number | null
+          available_slots?: number
+          capacity?: number
+          category?: string | null
           created_at?: string
           date: string
           description?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
-          organizer_id: string
+          organizer_username: string
           price?: number | null
           title: string
           updated_at?: string
         }
         Update: {
-          capacity?: number | null
+          available_slots?: number
+          capacity?: number
+          category?: string | null
           created_at?: string
           date?: string
           description?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
-          organizer_id?: string
+          organizer_username?: string
           price?: number | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_organizer_username_fkey"
+            columns: ["organizer_username"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["username"]
+          },
+        ]
       }
-      profiles: {
+      tickets: {
         Row: {
-          avatar_url: string | null
+          booking_date: string
+          event_id: string
+          id: string
+          participant_username: string
+        }
+        Insert: {
+          booking_date?: string
+          event_id: string
+          id?: string
+          participant_username: string
+        }
+        Update: {
+          booking_date?: string
+          event_id?: string
+          id?: string
+          participant_username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_participant_username_fkey"
+            columns: ["participant_username"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["username"]
+          },
+        ]
+      }
+      users: {
+        Row: {
           created_at: string
-          email: string
-          full_name: string | null
           id: string
-          updated_at: string
-          user_id: string
+          role: string
+          username: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
-          email: string
-          full_name?: string | null
           id?: string
-          updated_at?: string
-          user_id: string
+          role?: string
+          username: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
-          email?: string
-          full_name?: string | null
           id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
+          role?: string
+          username?: string
         }
         Relationships: []
       }
@@ -141,16 +132,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "admin" | "organizer" | "participant"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -277,8 +262,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "organizer", "participant"],
-    },
+    Enums: {},
   },
 } as const
