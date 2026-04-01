@@ -4,10 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, CalendarDays, Ticket } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { data: users, isLoading: loadingUsers } = useQuery({
-    queryKey: ["allUsers"],
+  const { data: profiles, isLoading: loadingProfiles } = useQuery({
+    queryKey: ["allProfiles"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -31,7 +31,7 @@ export default function AdminDashboard() {
     },
   });
 
-  if (loadingUsers || loadingEvents || loadingTickets) {
+  if (loadingProfiles || loadingEvents || loadingTickets) {
     return <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}</div>;
   }
 
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { label: "Total Users", value: users?.length ?? 0, icon: Users, color: "text-primary" },
+          { label: "Total Users", value: profiles?.length ?? 0, icon: Users, color: "text-primary" },
           { label: "Total Events", value: events?.length ?? 0, icon: CalendarDays, color: "text-accent" },
           { label: "Total Tickets", value: tickets?.length ?? 0, icon: Ticket, color: "text-primary" },
         ].map((s) => (
@@ -54,9 +54,12 @@ export default function AdminDashboard() {
       <div>
         <h2 className="font-display text-xl font-semibold mb-4">All Users</h2>
         <div className="glass-card divide-y divide-border">
-          {users?.map((u) => (
+          {profiles?.map((u: any) => (
             <div key={u.id} className="flex items-center justify-between p-4">
-              <span className="font-medium">@{u.username}</span>
+              <div>
+                <span className="font-medium">{u.full_name || u.email}</span>
+                <p className="text-xs text-muted-foreground">{u.email}</p>
+              </div>
               <span className="text-xs font-medium capitalize bg-primary/10 text-primary px-3 py-1 rounded-full">{u.role}</span>
             </div>
           ))}
@@ -70,7 +73,7 @@ export default function AdminDashboard() {
             <div key={ev.id} className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium">{ev.title}</p>
-                <p className="text-xs text-muted-foreground">by @{ev.organizer_username}</p>
+                <p className="text-xs text-muted-foreground">by {ev.organizer_username}</p>
               </div>
               <span className="text-sm text-muted-foreground">{new Date(ev.date).toLocaleDateString()}</span>
             </div>

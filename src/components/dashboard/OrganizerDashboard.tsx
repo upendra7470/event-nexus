@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -10,22 +10,22 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function OrganizerDashboard() {
-  const { currentUser } = useUser();
+  const { profile } = useAuth();
   const qc = useQueryClient();
   const [viewAttendeesId, setViewAttendeesId] = useState<string | null>(null);
 
   const { data: events, isLoading } = useQuery({
-    queryKey: ["myOrgEvents", currentUser?.username],
+    queryKey: ["myOrgEvents", profile?.email],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .eq("organizer_username", currentUser!.username)
+        .eq("organizer_username", profile!.email)
         .order("date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!currentUser,
+    enabled: !!profile,
   });
 
   const { data: attendees } = useQuery({
@@ -33,7 +33,7 @@ export default function OrganizerDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tickets")
-        .select("*, users!tickets_participant_username_fkey(username, role)")
+        .select("*")
         .eq("event_id", viewAttendeesId!);
       if (error) throw error;
       return data;
@@ -105,7 +105,7 @@ export default function OrganizerDashboard() {
                     <div className="space-y-2">
                       {attendees.map((a: any) => (
                         <div key={a.id} className="flex justify-between text-sm bg-secondary/50 rounded-lg px-3 py-2">
-                          <span>@{a.participant_username}</span>
+                          <span>{a.participant_username}</span>
                           <span className="text-muted-foreground text-xs">{format(new Date(a.booking_date), "MMM d")}</span>
                         </div>
                       ))}

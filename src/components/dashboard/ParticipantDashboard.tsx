@@ -1,26 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Ticket, CalendarDays, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
 
 export default function ParticipantDashboard() {
-  const { currentUser } = useUser();
+  const { user } = useAuth();
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["myTickets", currentUser?.username],
+    queryKey: ["myTickets", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tickets")
         .select("*, events(*)")
-        .eq("participant_username", currentUser!.username)
+        .eq("participant_username", user!.id)
         .order("booking_date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!currentUser,
+    enabled: !!user,
   });
 
   if (isLoading) {

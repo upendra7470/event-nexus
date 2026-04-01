@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { UserProvider } from "@/contexts/UserContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
 import EventDetails from "./pages/EventDetails";
@@ -20,7 +20,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <UserProvider>
+        <AuthProvider>
           <Navbar />
           <Routes>
             <Route path="/" element={<Index />} />
@@ -30,7 +30,7 @@ const App = () => (
             <Route path="/host" element={<HostEvent />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </UserProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

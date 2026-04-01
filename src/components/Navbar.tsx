@@ -1,18 +1,20 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, LogOut, LayoutDashboard, Menu, X, PlusCircle } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
-  const { currentUser, logout } = useUser();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
+
+  const isOrganizer = profile?.role === "organizer" || profile?.role === "admin";
 
   return (
     <nav className="sticky top-0 z-50 glass-card border-b">
@@ -25,29 +27,29 @@ export default function Navbar() {
         {/* Desktop */}
         <div className="hidden items-center gap-4 md:flex">
           <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Events</Link>
-          {currentUser && (
+          {profile && (
             <>
               <Link to="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                 <LayoutDashboard className="h-4 w-4" /> Dashboard
               </Link>
-              {(currentUser.role === "organizer" || currentUser.role === "admin") && (
+              {isOrganizer && (
                 <Link to="/host" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                   <PlusCircle className="h-4 w-4" /> Host Event
                 </Link>
               )}
             </>
           )}
-          {currentUser ? (
+          {profile ? (
             <div className="flex items-center gap-3">
-              <span className="text-xs rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">@{currentUser.username}</span>
-              <span className="text-xs rounded-full bg-accent/10 text-accent px-2 py-1 font-medium capitalize">{currentUser.role}</span>
+              <span className="text-xs rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">{profile.full_name || profile.email}</span>
+              <span className="text-xs rounded-full bg-accent/10 text-accent px-2 py-1 font-medium capitalize">{profile.role}</span>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-1" /> Exit
+                <LogOut className="h-4 w-4 mr-1" /> Sign Out
               </Button>
             </div>
           ) : (
             <Link to="/login">
-              <Button size="sm" className="gradient-btn">Enter</Button>
+              <Button size="sm" className="gradient-btn">Sign In</Button>
             </Link>
           )}
         </div>
@@ -61,21 +63,21 @@ export default function Navbar() {
       {open && (
         <div className="md:hidden glass-card border-t px-4 pb-4 space-y-3">
           <Link to="/" onClick={() => setOpen(false)} className="block text-sm font-medium py-2">Events</Link>
-          {currentUser && (
+          {profile && (
             <>
               <Link to="/dashboard" onClick={() => setOpen(false)} className="block text-sm font-medium py-2">Dashboard</Link>
-              {(currentUser.role === "organizer" || currentUser.role === "admin") && (
+              {isOrganizer && (
                 <Link to="/host" onClick={() => setOpen(false)} className="block text-sm font-medium py-2">Host Event</Link>
               )}
             </>
           )}
-          {currentUser ? (
+          {profile ? (
             <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => { handleLogout(); setOpen(false); }}>
-              <LogOut className="h-4 w-4 mr-1" /> Exit
+              <LogOut className="h-4 w-4 mr-1" /> Sign Out
             </Button>
           ) : (
             <Link to="/login" onClick={() => setOpen(false)}>
-              <Button size="sm" className="w-full gradient-btn">Enter</Button>
+              <Button size="sm" className="w-full gradient-btn">Sign In</Button>
             </Link>
           )}
         </div>

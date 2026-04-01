@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import { Navigate } from "react-router-dom";
 const CATEGORIES = ["general", "music", "tech", "sports", "food", "art", "business"];
 
 export default function HostEvent() {
-  const { currentUser } = useUser();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [form, setForm] = useState({
@@ -42,7 +42,7 @@ export default function HostEvent() {
         available_slots: cap,
         image_url: form.image_url || null,
         category: form.category,
-        organizer_username: currentUser!.username,
+        organizer_username: profile!.email,
       });
       if (error) throw error;
     },
@@ -55,7 +55,7 @@ export default function HostEvent() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  if (!currentUser || (currentUser.role !== "organizer" && currentUser.role !== "admin")) {
+  if (!profile || (profile.role !== "organizer" && profile.role !== "admin")) {
     return <Navigate to="/" replace />;
   }
 

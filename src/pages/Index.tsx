@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import EventCard from "@/components/EventCard";
 import EventCardSkeleton from "@/components/EventCardSkeleton";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ const CATEGORIES = ["all", "music", "tech", "sports", "food", "art", "business",
 export default function Index() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const { currentUser } = useUser();
+  const { profile } = useAuth();
 
   const { data: events, isLoading } = useQuery({
     queryKey: ["events"],
@@ -66,10 +66,10 @@ export default function Index() {
                 Explore Events <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </a>
-            {!currentUser && (
+            {!profile && (
               <Link to="/login">
                 <Button variant="outline" className="h-12 px-8 text-base">
-                  Fast Login
+                  Sign In
                 </Button>
               </Link>
             )}

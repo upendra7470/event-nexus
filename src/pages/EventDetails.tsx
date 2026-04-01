@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -12,7 +12,7 @@ import { useState } from "react";
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
-  const { currentUser } = useUser();
+  const { profile, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -28,29 +28,27 @@ export default function EventDetails() {
   });
 
   const { data: existingTicket } = useQuery({
-    queryKey: ["myTicket", id, currentUser?.username],
+    queryKey: ["myTicket", id, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tickets")
         .select("*")
         .eq("event_id", id!)
-        .eq("participant_username", currentUser!.username)
+        .eq("participant_username", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!id && !!currentUser,
+    enabled: !!id && !!user,
   });
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      // Insert ticket
       const { error: ticketErr } = await supabase
         .from("tickets")
-        .insert({ event_id: id!, participant_username: currentUser!.username });
+        .insert({ event_id: id!, participant_username: user!.id });
       if (ticketErr) throw ticketErr;
 
-      // Decrement available_slots
       const { error: updateErr } = await supabase
         .from("events")
         .update({ available_slots: (event!.available_slots ?? 1) - 1 })
@@ -110,7 +108,7 @@ export default function EventDetails() {
             {event.category && (
               <span className="text-xs font-medium bg-primary/10 text-primary px-3 py-1 rounded-full capitalize">{event.category}</span>
             )}
-            <span className="text-xs text-muted-foreground">by @{event.organizer_username}</span>
+            <span className="text-xs text-muted-foreground">by {event.organizer_username}</span>
           </div>
 
           <h1 className="font-display text-3xl md:text-4xl font-bold">{event.title}</h1>
@@ -149,7 +147,7 @@ export default function EventDetails() {
               <div className="flex items-center gap-2 text-accent font-medium">
                 <CheckCircle2 className="h-5 w-5" /> You're booked!
               </div>
-            ) : currentUser ? (
+            ) : profile ? (
               <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
                 <SheetTrigger asChild>
                   <Button className="gradient-btn px-8 py-3" disabled={slots <= 0}>
@@ -175,7 +173,7 @@ export default function EventDetails() {
                     <div className="glass-card p-4 flex items-center gap-3">
                       <Ticket className="h-5 w-5 text-primary" />
                       <div>
-                        <p className="text-sm font-medium">Booking as @{currentUser.username}</p>
+                        <p className="text-sm font-medium">Booking as {profile.full_name || profile.email}</p>
                         <p className="text-xs text-muted-foreground">1 ticket</p>
                       </div>
                     </div>
@@ -191,7 +189,7 @@ export default function EventDetails() {
               </Sheet>
             ) : (
               <Button onClick={() => navigate("/login")} className="gradient-btn px-8 py-3">
-                Login to Book
+                Sign In to Book
               </Button>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import ParticipantDashboard from "@/components/dashboard/ParticipantDashboard";
 import OrganizerDashboard from "@/components/dashboard/OrganizerDashboard";
@@ -6,7 +6,7 @@ import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
-  const { currentUser, loading } = useUser();
+  const { profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -17,21 +17,21 @@ export default function Dashboard() {
     );
   }
 
-  if (!currentUser) return <Navigate to="/login" replace />;
+  if (!profile) return <Navigate to="/login" replace />;
 
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in">
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
-          Welcome back, <span className="text-primary font-medium">@{currentUser.username}</span>{" "}
-          <span className="capitalize text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">{currentUser.role}</span>
+          Welcome back, <span className="text-primary font-medium">{profile.full_name || profile.email}</span>{" "}
+          <span className="capitalize text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">{profile.role}</span>
         </p>
       </div>
 
-      {currentUser.role === "admin" && <AdminDashboard />}
-      {currentUser.role === "organizer" && <OrganizerDashboard />}
-      {currentUser.role === "participant" && <ParticipantDashboard />}
+      {profile.role === "admin" && <AdminDashboard />}
+      {profile.role === "organizer" && <OrganizerDashboard />}
+      {profile.role === "participant" && <ParticipantDashboard />}
     </div>
   );
 }
